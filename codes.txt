@@ -1,0 +1,153 @@
+CREATE TABLE Customers (
+  CustomerID INT PRIMARY KEY,
+  Name VARCHAR(255) NOT NULL,
+  Email VARCHAR(255) NOT NULL,
+  Phone VARCHAR(20) NOT NULL,
+  Address VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE Orders (
+  OrderID INT PRIMARY KEY,
+  OrderDate DATE NOT NULL,
+  TotalAmount DECIMAL(10,2) NOT NULL,
+  CustomerID INT,
+  FOREIGN KEY (CustomerID) REFERENCES Customers(CustomerID)
+);
+
+CREATE TABLE Payment (
+  PaymentMethodID INT PRIMARY KEY,
+  Name VARCHAR(50) NOT NULL,
+  CardNumber VARCHAR(16) NOT NULL,
+  ExpirationDate DATE NOT NULL,
+  CVV VARCHAR(3) NOT NULL
+);
+
+CREATE TABLE Books (
+  BookID INT PRIMARY KEY,
+  Title VARCHAR(255) NOT NULL,
+  Price DECIMAL(10,2) NOT NULL,
+  ISBN VARCHAR(13) NOT NULL,
+  PublicationDate DATE NOT NULL,
+  PublisherID INT,
+  CategoryID INT,
+  FOREIGN KEY (PublisherID) REFERENCES Publishers(PublisherID),
+  FOREIGN KEY (CategoryID) REFERENCES Categories(CategoryID)
+);
+
+CREATE TABLE Authors (
+  AuthorID INT PRIMARY KEY,
+  FirstName VARCHAR(50) NOT NULL,
+  LastName VARCHAR(50) NOT NULL
+);
+
+CREATE TABLE Publishers (
+  PublisherID INT PRIMARY KEY,
+  Name VARCHAR(255) NOT NULL,
+  Address VARCHAR(255) NOT NULL,
+  Phone VARCHAR(20) NOT NULL
+);
+
+CREATE TABLE Categories (
+  CategoryID INT PRIMARY KEY,
+  Name VARCHAR(50) NOT NULL
+);
+
+CREATE TABLE BookAuthors (
+  BookID INT,
+  AuthorID INT,
+  PRIMARY KEY (BookID, AuthorID),
+  FOREIGN KEY (BookID) REFERENCES Books(BookID),
+  FOREIGN KEY (AuthorID) REFERENCES Authors(AuthorID)
+);
+
+CREATE TABLE BookOrders (
+  BookID INT,
+  OrderID INT,
+  PRIMARY KEY (BookID, OrderID),
+  FOREIGN KEY (BookID) REFERENCES Books(BookID),
+  FOREIGN KEY (OrderID) REFERENCES Orders(OrderID)
+);
+
+CREATE OR REPLACE TRIGGER count_rows_trigger
+BEFORE INSERT ON books
+DECLARE
+    total NUMBER;
+BEGIN
+    SELECT COUNT(*) INTO total FROM books;
+    DBMS_OUTPUT.PUT_LINE('Current number of rows in books table: ' || total);
+END;
+
+
+//to enable trigger
+ALTER TRIGGER count_rows_trigger ENABLE;
+
+//check
+//when you insert any data for any table, the trigger can see
+//for axample:
+INSERT INTO Bookss (BookID, Title, Price, ISBN, PublicationDate, PublisherID, CategoryID)
+VALUES (5, 'DALA', 4500.00, '456456789', TO_DATE('2021-04-19', 'YYYY_MM_DD'), 1, 1)
+
+
+CREATE OR REPLACE PROCEDURE add_bookk (
+    bookid IN bookss.bookid%TYPE,
+    title IN bookss.title%TYPE,
+    price IN bookss.price%TYPE,
+    isbn IN bookss.isbn%type,
+    PUBLICATIONDATE IN bookss.PUBLICATIONDATE%type,
+    PUBLISHERID in bookss.PUBLISHERID%type,
+    category_id IN bookss.categoryid%TYPE
+)
+IS
+    title_error EXCEPTION;
+BEGIN
+    IF LENGTH(title) < 5 THEN
+        RAISE title_error;
+    ELSE
+        INSERT INTO bookss (bookid, title, price,isbn, PUBLICATIONDATE, PUBLISHERID, categoryid) VALUES (bookid, title, price,isbn, PUBLICATIONDATE, PUBLISHERID, category_id);
+    END IF;
+    
+    EXCEPTION
+        WHEN title_error THEN
+            DBMS_OUTPUT.PUT_LINE('Title must be at least 5 characters long.');
+END;
+
+
+
+//check:
+begin
+  add_bookk(3,'Til', 9000.00, '1234567890123', TO_DATE('1999-02-02', 'YYYY-MM_DD'), 2, 2);
+End;
+
+CREATE OR REPLACE PROCEDURE update_price
+IS
+BEGIN
+   UPDATE bookss
+   SET price = price * 1.1
+   WHERE categoryid = 1;
+   DBMS_OUTPUT.PUT_LINE('Number of rows updated: ' || SQL%ROWCOUNT);
+END;
+
+//check:
+begin 
+update_price;
+End;
+
+CREATE OR REPLACE FUNCTION count_records RETURN NUMBER IS total NUMBER; BEGIN SELECT COUNT(*) INTO total FROM books; RETURN total; END; 
+
+//check: SELECT count_records() FROM dual; 
+
+CREATE OR REPLACE PROCEDURE group_by_infooo
+IS
+   category_id bookss.categoryid%type;
+   category_count NUMBER;
+   CURSOR category_cursor IS 
+      SELECT categoryid, COUNT(*) as category_count
+      FROM bookss
+      GROUP BY categoryid;
+BEGIN
+   FOR category_rec IN category_cursor LOOP
+      category_id := category_rec.categoryid;
+      category_count := category_rec.category_count;
+      DBMS_OUTPUT.PUT_LINE('Category ' || category_id || ' Count: ' || category_count);
+   END LOOP;
+END;
